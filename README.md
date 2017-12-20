@@ -1,4 +1,4 @@
-# pytorch_autobatcher
+# pytorch autobatcher
 
 An auto batcher for variable sized sequences
 
