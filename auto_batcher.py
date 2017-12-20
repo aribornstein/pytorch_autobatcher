@@ -2,10 +2,11 @@
 Written by Ari Bornstein
 """
 import itertools
+import random
+from torch.utils import data
 import torch
-import torch.utils
 
-class AutoBatcher():
+class AutoBatcher:
     """
     A class for auto batching variable length sequences by length
     minibatch guarentees that the batch returned will not exceed the specified length.
@@ -26,6 +27,10 @@ class AutoBatcher():
         """
         self.data.sort(key=lambda x: len(x[0]))
         groups = [list(group) for key, group in itertools.groupby(self.data, lambda x: len(x[0]))]
+        if self.shuffle:
+            print groups
+            random.shuffle(groups)
+
         for group in groups:
             X, y = zip(*group)
             load_set = torch.utils.data.TensorDataset(torch.LongTensor(X), torch.LongTensor(y))
@@ -35,7 +40,6 @@ class AutoBatcher():
                                                             num_workers=self.num_workers))
 
 if __name__ == "__main__":
-    import random
     # Generate example langauge of odd and even sequences
     POS_DATA = [[0 for i in range(random.choice(range(2, 100, 2)))] for _ in range(500)]
     NEG_DATA = [[0 for i in range(random.choice(range(1, 100, 2)))] for _ in range(500)]
