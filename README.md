@@ -18,8 +18,8 @@ A class for auto batching variable length sequences by length minibatch guarente
     y = [0]*len(NEG_DATA) + [1]*len(POS_DATA)
 
     # Generate auto batcher
-    TRAIN_BATCHER = AutoBatcher(X, y, batch_size=100, num_workers=4, shuffle=True)
-    for loader in TRAIN_BATCHER.loaders:
-        for i, data in enumerate(loader, 0):
-            print i, data # Do training here
+    TRAIN_BATCHER =  AutoBatcher(X, y, batch_size=100, shuffle=True)
+    for i, data in enumerate(train_batcher.get_batches(), 0):
+        inputs, labels = data
+        # Do training here
 ```
