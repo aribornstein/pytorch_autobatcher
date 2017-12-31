@@ -1,56 +1,53 @@
-"""
-Written by Ari Bornstein
-"""
-import itertools
-import random
-from torch.utils import data
-import torch
-
 class AutoBatcher:
     """
-    A class for auto batching variable length sequences by length
+    A class for naive auto batching variable length sequences by length
     minibatch guarentees that the batch returned will not exceed the specified length.
     The longer the sequence the less value this provides but it is good for processing sentences
     since senteces tend not to contain more than 30+ words.
     """
-    def __init__(self, X, y, batch_size, num_workers=0, shuffle=False):
+    def __init__(self, X, y, batch_size, shuffle=False):
         self.data = zip(X, y)
+        self.X = X
+        self.y = y
         self.shuffle = shuffle
         self.batch_size = batch_size
-        self.num_workers = num_workers
-        self.loaders = []
-        self.batch()
+        self._batches = []
+        self._batch()
 
-    def batch(self):
+    def batch_count(self):
+        """
+        returns num of batches
+        """
+        return len(self._batches)
+
+    def get_batches(self):
+        """
+        Return loaders
+        """
+        if self.shuffle:
+            random.shuffle(self._batches)
+        return self._batches
+
+    def _list_to_array(self, list):
+        """
+        np.array() tries to infer nested dims, this is a simple list to array converter
+        """
+        arr = np.empty(len(list), dtype=object)
+        for i, o in enumerate(list):
+            arr[i] = o
+        return arr
+
+    def _batch(self):
         """
         Batch the sequences
         """
-        self.data.sort(key=lambda x: len(x[0]))
+        if self.batch_size > 1:
+            self.data.sort(key=lambda x: len(x[0]))
         groups = [list(group) for key, group in itertools.groupby(self.data, lambda x: len(x[0]))]
-        if self.shuffle:
-            print groups
-            random.shuffle(groups)
-
         for group in groups:
-            X, y = zip(*group)
-            load_set = torch.utils.data.TensorDataset(torch.LongTensor(X), torch.LongTensor(y))
-            self.loaders.append(torch.utils.data.DataLoader(load_set,
-                                                            batch_size=self.batch_size,
-                                                            shuffle=self.shuffle,
-                                                            num_workers=self.num_workers))
-
-if __name__ == "__main__":
-    # Generate example langauge of odd and even sequences
-    POS_DATA = [[0 for i in range(random.choice(range(2, 100, 2)))] for _ in range(500)]
-    NEG_DATA = [[0 for i in range(random.choice(range(1, 100, 2)))] for _ in range(500)]
-    DATA = NEG_DATA + POS_DATA
-
-    # Create gold data for training
-    X = [[num for num in seq] for seq in [list(x) for x in DATA]]
-    y = [0]*len(NEG_DATA) + [1]*len(POS_DATA)
-
-    # Generate auto batcher
-    TRAIN_BATCHER = AutoBatcher(X, y, batch_size=100, num_workers=4, shuffle=True)
-    for loader in TRAIN_BATCHER.loaders:
-        for i, data in enumerate(loader, 0):
-            print i, data # Do training here
+            if self.shuffle:
+                random.shuffle(group)
+            for i in xrange(0, len(group), self.batch_size):
+                batch = group[i:i + self.batch_size]
+                batch_input, batch_labels = zip(*batch)
+                self._batches.append([self._list_to_array(list(batch_input)), list(batch_labels)])
